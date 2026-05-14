@@ -1,0 +1,477 @@
+openapi: 3.1.0
+info:
+  title: WHM Analytics Collector API
+  description: |
+    ## Server-side Analytics Collector
+
+    Приём событий аналитики и передача в Matomo.
+
+    ### Типы событий:
+    - **pageview** — просмотр страницы
+    - **event** — произвольное событие (клик, скролл)
+    - **ecommerce** — покупка, корзина
+    - **goal** — достижение цели
+
+    ### Custom Dimensions:
+    | # | Поле | Описание |
+    |---|------|----------|
+    | 1 | dimension1 | fbc (Facebook Click ID) |
+    | 2 | dimension2 | fbp (Facebook Browser ID) |
+    | 3 | dimension3 | gclid (Google Click ID) |
+    | 4 | dimension4 | yclid (Yandex Click ID) |
+    | 5 | dimension5 | email_hash (SHA256) |
+    | 6 | dimension6 | phone_hash (SHA256) |
+    | 7 | dimension7 | user_id (WHMCS) |
+    | 8 | dimension8 | utm_source |
+    | 9 | dimension9 | utm_medium |
+    | 15 | dimension15 | plan_type (free/trial/paid) |
+    | 16 | dimension16 | is_renewal (yes/no) |
+    | 17 | dimension17 | client_domain |
+    | 18 | dimension18 | product_name |
+
+    ### Cross-Domain Attribution:
+    Collector использует SQLite для сохранения attribution dimensions (1-9) по visitor_id.
+    При переходе между доменами (Front → WHMCS) dimensions автоматически восстанавливаются.
+
+  version: 1.2.0
+  contact:
+    email: ignat@webhostmost.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://analytics.webhostmost.com
+    description: Production (direct)
+  - url: https://{domain}/t
+    description: Production (via proxy)
+    variables:
+      domain:
+        default: analytics.ignat.best
+        description: Your domain with proxy configured
+
+tags:
+  - name: collect
+    description: Приём событий аналитики
+  - name: health
+    description: Health checks
+  - name: metrics
+    description: Метрики и статистика
+
+paths:
+  /collect:
+    post:
+      tags:
+        - collect
+      summary: Отправить событие аналитики
+      description: |
+        Принимает события и отправляет в Matomo.
+        
+        Поддерживает:
+        - JSON body (рекомендуется)
+        - Form data (legacy)
+        
+        Attribution dimensions (1-9) автоматически сохраняются в SQLite 
+        и восстанавливаются для cross-domain tracking.
+      operationId: collect_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollectRequest'
+            examples:
+              pageview:
+                summary: Просмотр страницы
+                value:
+                  site_id: 3
+                  visitor_id: "a1b2c3d4e5f6a1b2"
+                  url: "https://example.com/page"
+                  title: "Page Title"
+                  dimension3: "GCLID123"
+                  dimension8: "google"
+                  dimension9: "cpc"
+              event:
+                summary: Событие (клик)
+                value:
+                  site_id: 3
+                  visitor_id: "a1b2c3d4e5f6a1b2"
+                  url: "https://example.com/page"
+                  event_category: "Button"
+                  event_action: "click"
+                  event_name: "CTA"
+              ecommerce:
+                summary: E-commerce покупка
+                value:
+                  site_id: 4
+                  visitor_id: "a1b2c3d4e5f6a1b2"
+                  url: "https://whmcs.example.com/viewinvoice.php"
+                  order_id: "INV-12345"
+                  revenue: 99.99
+                  dimension5: "sha256_email_hash"
+                  dimension6: "sha256_phone_hash"
+                  dimension7: "68139"
+                  dimension15: "paid"
+                  dimension16: "no"
+                  dimension17: "example.com"
+                  dimension18: "Pro Hosting USA"
+      responses:
+        '200':
+          description: Успешная обработка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectResponse'
+              examples:
+                success:
+                  value:
+                    status: ok
+                    visitor_id: "a1b2c3d4"
+                error:
+                  value:
+                    status: error
+                    code: site_not_allowed
+                    message: "Site ID not allowed: 999"
+                skipped:
+                  value:
+                    status: skipped
+                    reason: bot
+        '422':
+          description: Ошибка валидации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '429':
+          description: Rate limit exceeded
+
+    get:
+      tags:
+        - collect
+      summary: Pixel tracking (fallback)
+      description: |
+        GET запрос для pixel tracking.
+        Возвращает 1x1 transparent GIF.
+      operationId: collect_get
+      parameters:
+        - name: idsite
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 999
+          description: ID сайта в Matomo
+        - name: _id
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 16
+            maxLength: 32
+            pattern: '^[0-9a-f]+$'
+          description: Visitor ID (hex)
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+            maxLength: 2048
+          description: URL страницы
+      responses:
+        '200':
+          description: 1x1 transparent GIF
+          content:
+            image/gif:
+              schema:
+                type: string
+                format: binary
+
+  /health:
+    get:
+      tags:
+        - health
+      summary: Health check
+      description: Базовая проверка работоспособности сервиса
+      operationId: health_check
+      responses:
+        '200':
+          description: Сервис работает
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: healthy
+                timestamp: 1768611098
+
+  /health/ready:
+    get:
+      tags:
+        - health
+      summary: Readiness check
+      description: Проверка готовности (включая Matomo connectivity)
+      operationId: readiness_check
+      responses:
+        '200':
+          description: Сервис готов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+              example:
+                status: ready
+                matomo: ok
+                timestamp: 1768611098
+
+  /stats:
+    get:
+      tags:
+        - metrics
+      summary: Статистика сервиса
+      description: Метрики работы collector
+      operationId: get_stats
+      responses:
+        '200':
+          description: Статистика
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+
+  /whm.js:
+    get:
+      tags:
+        - collect
+      summary: JS Tracker
+      description: |
+        JavaScript трекер v1.2.0 (~4KB gzip).
+        
+        Кэшируется на 1 час.
+      operationId: get_tracker
+      responses:
+        '200':
+          description: JavaScript файл
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              example: "public, max-age=3600"
+          content:
+            application/javascript:
+              schema:
+                type: string
+
+components:
+  schemas:
+    CollectRequest:
+      type: object
+      required:
+        - site_id
+        - visitor_id
+        - url
+      properties:
+        site_id:
+          type: integer
+          minimum: 1
+          maximum: 999
+          description: ID сайта в Matomo
+          example: 3
+        visitor_id:
+          type: string
+          minLength: 16
+          maxLength: 32
+          pattern: '^[0-9a-f]+$'
+          description: Уникальный ID посетителя (hex)
+          example: "a1b2c3d4e5f6a1b2"
+        url:
+          type: string
+          maxLength: 2048
+          description: URL страницы
+          example: "https://example.com/page"
+        title:
+          type: string
+          maxLength: 500
+          description: Заголовок страницы
+        referrer:
+          type: string
+          maxLength: 2048
+          description: Referrer URL
+        user_id:
+          type: string
+          maxLength: 200
+          description: ID пользователя (WHMCS client ID)
+        
+        # Event tracking
+        event_category:
+          type: string
+          maxLength: 255
+          description: Категория события
+        event_action:
+          type: string
+          maxLength: 255
+          description: Действие события
+        event_name:
+          type: string
+          maxLength: 255
+          description: Название события
+        event_value:
+          type: number
+          description: Значение события
+        
+        # E-commerce
+        order_id:
+          type: string
+          maxLength: 100
+          description: ID заказа/invoice
+        revenue:
+          type: number
+          minimum: 0
+          description: Сумма заказа
+        items:
+          type: string
+          description: JSON массив товаров
+        
+        # Goal
+        goal_id:
+          type: integer
+          minimum: 0
+          description: ID цели в Matomo
+        
+        # Custom Dimensions (attribution)
+        dimension1:
+          type: string
+          maxLength: 255
+          description: fbc (Facebook Click ID)
+        dimension2:
+          type: string
+          maxLength: 255
+          description: fbp (Facebook Browser ID)
+        dimension3:
+          type: string
+          maxLength: 255
+          description: gclid (Google Click ID)
+        dimension4:
+          type: string
+          maxLength: 255
+          description: yclid (Yandex Click ID)
+        dimension5:
+          type: string
+          maxLength: 255
+          description: email_hash (SHA256)
+        dimension6:
+          type: string
+          maxLength: 255
+          description: phone_hash (SHA256)
+        dimension7:
+          type: string
+          maxLength: 255
+          description: user_id (WHMCS)
+        dimension8:
+          type: string
+          maxLength: 255
+          description: utm_source
+        dimension9:
+          type: string
+          maxLength: 255
+          description: utm_medium
+        
+        # Custom Dimensions (WHMCS e-commerce)
+        dimension15:
+          type: string
+          maxLength: 255
+          enum: [free, trial, paid]
+          description: plan_type
+        dimension16:
+          type: string
+          maxLength: 255
+          enum: [yes, no]
+          description: is_renewal
+        dimension17:
+          type: string
+          maxLength: 255
+          description: client_domain
+        dimension18:
+          type: string
+          maxLength: 255
+          description: product_name
+        
+        # Screen
+        screen_width:
+          type: integer
+          description: Ширина экрана
+        screen_height:
+          type: integer
+          description: Высота экрана
+
+    CollectResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, error, skipped]
+          description: Статус обработки
+        visitor_id:
+          type: string
+          description: Visitor ID (первые 8 символов)
+        code:
+          type: string
+          description: Код ошибки (при status=error)
+        message:
+          type: string
+          description: Сообщение об ошибке
+        reason:
+          type: string
+          description: Причина пропуска (при status=skipped)
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy]
+        timestamp:
+          type: integer
+          description: Unix timestamp
+
+    ReadinessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready]
+        matomo:
+          type: string
+          enum: [ok, error]
+        timestamp:
+          type: integer
+
+    StatsResponse:
+      type: object
+      properties:
+        requests_total:
+          type: integer
+        requests_success:
+          type: integer
+        requests_error:
+          type: integer
+        requests_bot_filtered:
+          type: integer
+        uptime_seconds:
+          type: number
+
+    ValidationError:
+      type: object
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
+            properties:
+              loc:
+                type: array
+                items:
+                  type: string
+              msg:
+                type: string
+              type:
+                type: string

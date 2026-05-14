@@ -1,0 +1,132 @@
+# WHM Analytics - Custom Dimensions Schema
+# 
+# ВАЖНО: Эта схема ОДИНАКОВА для сайтов 3 и 4 (тестовые)
+# При миграции на production (1, 2) использовать ту же схему!
+#
+# Matomo хранит dimensions в БД:
+# - Visit dimensions: matomo_log_visit.custom_dimension_{N}
+# - Action dimensions: matomo_log_link_visit_action.custom_dimension_{N}
+
+# =====================================================
+# VISIT DIMENSIONS (сохраняются на весь визит/сессию)
+# =====================================================
+visit_dimensions:
+  # --- Marketing IDs ---
+  1:
+    name: "fbc"
+    description: "Facebook Click ID (_fbc cookie)"
+    example: "fb.1.1704067200000.AbCdEf123456"
+    used_by: ["Meta CAPI"]
+    
+  2:
+    name: "fbp"
+    description: "Facebook Browser ID (_fbp cookie)"
+    example: "fb.1.1704067200000.1234567890"
+    used_by: ["Meta CAPI"]
+    
+  3:
+    name: "gclid"
+    description: "Google Click ID (from URL)"
+    example: "CjwKCAiA..."
+    used_by: ["GA4", "Google Ads"]
+    
+  4:
+    name: "yclid"
+    description: "Yandex Click ID (from URL)"
+    example: "1234567890123456789"
+    used_by: ["Yandex Metrika"]
+
+  27:
+    name: "msclkid"
+    description: "Microsoft Click ID (from URL or cookie _msclkid)"
+    example: "abc123def456"
+    used_by: ["Microsoft Ads Offline Conversions"]
+
+  # --- User Identification ---
+  5:
+    name: "email_hash"
+    description: "SHA256 hash of lowercase email"
+    privacy: "Hashed, not reversible"
+    
+  6:
+    name: "phone_hash"
+    description: "SHA256 hash of E.164 phone"
+    privacy: "Hashed, not reversible"
+    
+  7:
+    name: "user_id"
+    description: "WHMCS User ID"
+
+  # --- UTM Parameters ---
+  8:
+    name: "utm_source"
+    description: "Traffic source"
+    example: "google, facebook, newsletter"
+    
+  9:
+    name: "utm_medium"
+    description: "Marketing medium"
+    example: "cpc, organic, email"
+
+
+# =====================================================
+# ACTION DIMENSIONS (на каждое действие)
+# =====================================================
+action_dimensions:
+  10:
+    name: "utm_campaign"
+    description: "Campaign name"
+    
+  11:
+    name: "utm_content"
+    description: "Ad content/variation"
+    
+  12:
+    name: "utm_term"
+    description: "Search term (paid)"
+    
+  13:
+    name: "page_type"
+    values: ["homepage", "product", "checkout", "cart", "account"]
+      
+  14:
+    name: "scroll_depth"
+    values: ["25", "50", "75", "100"]
+
+
+# =====================================================
+# MAPPING: Collector → Matomo
+# =====================================================
+collector_mapping:
+  # Visit-level
+  fbc: "dimension1"
+  fbp: "dimension2"
+  gclid: "dimension3"
+  yclid: "dimension4"
+  msclkid: "dimension27"
+  email_hash: "dimension5"
+  phone_hash: "dimension6"
+  user_id: "dimension7"
+  utm_source: "dimension8"
+  utm_medium: "dimension9"
+  
+  # Action-level
+  utm_campaign: "dimension10"
+  utm_content: "dimension11"
+  utm_term: "dimension12"
+  page_type: "dimension13"
+  scroll_depth: "dimension14"
+
+
+# =====================================================
+# COOKIE STRATEGY
+# =====================================================
+# Наши cookies (НЕ блокируются - твой домен):
+#   _whm_id   : Visitor ID (hex 16 chars)
+#   _whm_fbc  : Facebook Click ID (копия fbclid)
+#   _whm_fbp  : Facebook Browser ID (генерируем)
+#   _whm_gclid: Google Click ID (копия gclid)
+#   _msclkid  : Microsoft Click ID (копия msclkid)
+#   _whm_ref  : Первый referrer
+#
+# Settings: httpOnly=false, secure=true, sameSite=Lax, maxAge=2y

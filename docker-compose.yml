@@ -1,0 +1,123 @@
+# WHM Analytics Stack - Docker Compose
+# 
+# Фиксированная сеть whm-net: 172.30.0.0/24
+# 
+# IP адреса:
+#   172.30.0.10 - whm-collector (FastAPI)
+#   172.30.0.20 - matomo-app (PHP) 
+#   172.30.0.21 - matomo-db (MariaDB)
+#
+# Запуск: docker compose up -d
+# Стоп:   docker compose down
+# Rebuild: docker compose up -d --build collector
+
+version: "3.8"
+
+networks:
+  whm-net:
+    external: true
+    name: whm-net
+
+services:
+  # ===========================================
+  # WHM Collector - FastAPI + Gunicorn
+  # ===========================================
+  collector:
+    container_name: whm-collector
+    image: whm-collector:latest
+    build:
+      context: ./collector
+      dockerfile: Dockerfile
+    networks:
+      whm-net:
+        ipv4_address: 172.30.0.10
+    ports:
+      - "127.0.0.1:9100:9100"
+    volumes:
+      - ./geoip:/opt/geoip:ro
+      - ./logs:/var/log/whm-analytics:rw
+      - ./config:/opt/whm-analytics/config:ro
+    environment:
+      - GEOIP_PATH=/opt/geoip/GeoLite2-City.mmdb
+      - MATOMO_URL=http://172.30.0.20:80
+      - MATOMO_TOKEN=${MATOMO_TOKEN:-b183e75f04263b66d30f225c081acf7f}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - REDIS_HOST=172.30.0.1
+      - REDIS_PORT=6379
+      - REDIS_DB=${REDIS_DB:-3}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9100/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # ===========================================
+  # Matomo - PHP Application (FPM + nginx)
+  # ===========================================
+  matomo-app:
+    container_name: matomo-app
+    image: matomo:latest
+    networks:
+      whm-net:
+        ipv4_address: 172.30.0.20
+    ports:
+      - "127.0.0.1:9000:80"
+    volumes:
+      - matomo-data:/var/www/html
+    environment:
+      - MATOMO_DATABASE_HOST=172.30.0.21
+      - MATOMO_DATABASE_ADAPTER=mysql
+      - MATOMO_DATABASE_TABLES_PREFIX=matomo_
+      - MATOMO_DATABASE_USERNAME=${DB_USER:-matomo}
+      - MATOMO_DATABASE_PASSWORD=${DB_PASSWORD}
+      - MATOMO_DATABASE_DBNAME=${DB_NAME:-matomo}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/matomo.php"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      matomo-db:
+        condition: service_healthy
+
+  # ===========================================
+  # MariaDB - Database
+  # ===========================================
+  matomo-db:
+    container_name: matomo-db
+    image: mariadb:10.11
+    networks:
+      whm-net:
+        ipv4_address: 172.30.0.21
+    volumes:
+      - matomo-db-data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${DB_NAME:-matomo}
+      - MYSQL_USER=${DB_USER:-matomo}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  matomo-data:
+    external: true
+    name: analytics-min_matomo_data
+  matomo-db-data:
+    external: true
+    name: analytics-min_db_data

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebHostMost - Test Front Site</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; padding: 40px 20px;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { 
+            background: white; border-radius: 16px; padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3); margin-bottom: 24px;
+        }
+        h1 { color: #333; margin-bottom: 8px; }
+        .subtitle { color: #666; margin-bottom: 32px; }
+        .section { margin-bottom: 32px; }
+        .section h2 { color: #444; margin-bottom: 16px; font-size: 18px; }
+        .btn {
+            display: inline-block; padding: 14px 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; text-decoration: none; border-radius: 8px;
+            font-weight: 600; margin: 8px 8px 8px 0;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102,126,234,0.4); }
+        .btn-secondary { background: #28a745; }
+        .btn-whmcs { background: #e74c3c; }
+        .info-box {
+            background: #f8f9fa; border-left: 4px solid #667eea;
+            padding: 16px; margin: 16px 0; border-radius: 0 8px 8px 0;
+        }
+        .info-box code { background: #e9ecef; padding: 2px 6px; border-radius: 4px; }
+        .log { 
+            background: #1a1a2e; color: #0f0; padding: 16px;
+            border-radius: 8px; font-family: monospace; font-size: 13px;
+            max-height: 200px; overflow-y: auto; margin-top: 16px;
+        }
+        .log .dim { color: #666; }
+        .status { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .status-ok { background: #d4edda; color: #155724; }
+        .status-wait { background: #fff3cd; color: #856404; }
+        .vid { font-family: monospace; background: #e9ecef; padding: 8px 12px; border-radius: 4px; display: inline-block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>🚀 WebHostMost Test Front</h1>
+            <p class="subtitle">Testing WHM Analytics tracker (Site ID: 3)</p>
+            
+            <div class="section">
+                <h2>📊 Tracker Status</h2>
+                <p>Status: <span id="status" class="status status-wait">Initializing...</span></p>
+                <p style="margin-top: 12px">Visitor ID: <span id="vid" class="vid">-</span></p>
+            </div>
+
+            <div class="section">
+                <h2>🔗 Cross-Domain Test</h2>
+                <p class="info-box">
+                    Click the button below to go to WHMCS. Your <code>visitor_id</code> will be passed via URL parameter <code>_whm_vid</code>.
+                </p>
+                <a href="https://staging.whmtest.com/cart.php" class="btn btn-whmcs">🛒 Go to WHMCS Cart</a>
+                <a href="https://staging.whmtest.com/clientarea.php" class="btn btn-whmcs">👤 Go to Client Area</a>
+            </div>
+
+            <div class="section">
+                <h2>🎯 Test Events</h2>
+                <button class="btn" onclick="trackClick()">Track Click Event</button>
+                <button class="btn btn-secondary" onclick="trackCustom()">Track Custom Event</button>
+                <button class="btn" onclick="trackConversion()">Track Conversion</button>
+            </div>
+
+            <div class="section">
+                <h2>📝 Event Log</h2>
+                <div id="log" class="log">
+                    <span class="dim">[waiting for events...]</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>ℹ️ How it works</h2>
+            <div class="info-box">
+                <strong>This page:</strong> analytics.ignat.best (Site ID: 3)<br>
+                <strong>WHMCS:</strong> staging.whmtest.com (Site ID: 4)<br><br>
+                When you click "Go to WHMCS", the tracker adds <code>?_whm_vid=YOUR_ID</code> to the URL.
+                WHMCS tracker picks up this ID and continues the session.
+            </div>
+        </div>
+    </div>
+
+    <!-- WHM Analytics Tracker -->
+    <script src="https://analytics.webhostmost.com/whm.js"></script>
+    <script>
+        var logEl = document.getElementById('log');
+        var statusEl = document.getElementById('status');
+        var vidEl = document.getElementById('vid');
+
+        function addLog(msg) {
+            var time = new Date().toLocaleTimeString();
+            logEl.innerHTML += '\n[' + time + '] ' + msg;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        // Initialize tracker
+        whm('init', {
+            siteId: 3,
+            collectorUrl: 'https://analytics.webhostmost.com/collect',
+            linkDomains: ['staging.whmtest.com'],  // Auto-add _whm_vid to links to WHMCS
+            debug: true
+        });
+
+        // Check initialization
+        setTimeout(function() {
+            if (typeof whm !== 'undefined') {
+                statusEl.className = 'status status-ok';
+                statusEl.textContent = 'Active ✓';
+                
+                // Get visitor ID from localStorage
+                var vid = localStorage.getItem('_whm_vid') || 'not set';
+                vidEl.textContent = vid;
+                
+                addLog('Tracker initialized, visitor_id=' + vid);
+                addLog('Pageview sent to collector');
+            }
+        }, 500);
+
+        function trackClick() {
+            whm('event', 'test', 'button_click', { label: 'test-button' });
+            addLog('Event sent: test/button_click');
+        }
+
+        function trackCustom() {
+            whm('event', 'engagement', 'custom_action', { 
+                label: 'demo-action',
+                value: 42
+            });
+            addLog('Event sent: engagement/custom_action (value=42)');
+        }
+
+        function trackConversion() {
+            whm('conversion', {
+                goalId: 1,
+                revenue: 9.99
+            });
+            addLog('Conversion sent: goalId=1, revenue=9.99');
+        }
+
+        // Log any URL params
+        var urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('_whm_vid')) {
+            addLog('⚡ Received _whm_vid from URL: ' + urlParams.get('_whm_vid'));
+        }
+        if (urlParams.has('utm_source')) {
+            addLog('📈 UTM detected: ' + urlParams.get('utm_source'));
+        }
+    </script>
+</body>
+</html>

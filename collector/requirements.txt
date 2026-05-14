@@ -1,0 +1,30 @@
+# WHM Analytics Collector
+# FastAPI + Gunicorn + Uvicorn
+
+# Web framework
+fastapi==0.109.2
+uvicorn[standard]==0.27.1
+gunicorn==21.2.0
+
+# Validation
+pydantic==2.6.1
+pydantic-settings==2.1.0
+
+# HTTP client (для Matomo)
+httpx==0.26.0
+
+# GeoIP
+geoip2==4.8.0
+
+# User-Agent parsing
+user-agents==2.2.0
+
+# Configuration
+pyyaml==6.0.1
+python-dotenv==1.0.1
+
+# Rate limiting (опционально)
+slowapi==0.1.9
+
+# Redis (visitor dimensions store)
+redis>=5.0.0

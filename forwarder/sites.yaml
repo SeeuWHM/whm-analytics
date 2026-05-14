@@ -1,0 +1,303 @@
+# =============================================================================
+# WHM Analytics - Sites Configuration
+# =============================================================================
+#
+# SITES:
+#   - site 1: WHMCS client area (client.webhostmost.com)
+#   - site 2: All 28 front-ends (webhostmost.*)
+#   - site 3: Staging front (analytics.ignat.best)
+#   - site 4: Staging WHMCS (staging.whmtest.com)
+#
+# =============================================================================
+
+# Global configuration (credentials from .env)
+global:
+  matomo_db:
+    host: "${MATOMO_DB_HOST}"
+    port: 3306
+    user: "${MATOMO_DB_USER}"
+    password: "${MATOMO_DB_PASSWORD}"
+    database: "${MATOMO_DB_NAME}"
+
+sites:
+  # ---------------------------------------------------------------------------
+  # Production - WHMCS (client.webhostmost.com) - idsite=1
+  # ---------------------------------------------------------------------------
+  1:
+    name: "Production WHMCS"
+    base_url: "https://client.webhostmost.com"
+    domains:
+      - client.webhostmost.com
+    client:
+      trackScroll: false
+      linkDomains:
+        - webhostmost.com
+        - webhostmost.at
+        - webhostmost.be
+        - webhostmost.ca
+        - webhostmost.cy
+        - webhostmost.de
+        - webhostmost.ee
+        - webhostmost.es
+        - webhostmost.fi
+        - webhostmost.fr
+        - webhostmost.gr
+        - webhostmost.in
+        - webhostmost.it
+        - webhostmost.lt
+        - webhostmost.lu
+        - webhostmost.lv
+        - webhostmost.md
+        - webhostmost.mt
+        - webhostmost.nl
+        - webhostmost.pk
+        - webhostmost.pt
+        - webhostmost.ro
+        - webhostmost.ru
+        - webhostmost.si
+        - webhostmost.sk
+        - webhostmost.uk
+        # Blog, Docs, Forum
+        - blog.webhostmost.com
+        - docs.webhostmost.com
+        - forum.webhostmost.com
+    ga4:
+      enabled: true
+      measurement_id: "${GA4_PROD_WHMCS_MEASUREMENT_ID}"
+      api_secret: "${GA4_PROD_WHMCS_API_SECRET}"
+      events:
+        - page_view
+        - purchase
+        - start_trial
+        - start_free
+    meta:
+      enabled: true
+      pixel_id: "${META_PROD_PIXEL_ID}"
+      access_token: "${META_PROD_ACCESS_TOKEN}"
+      events:
+        - purchase
+        - start_trial
+    microsoft:
+      enabled: true
+      developer_token: "${MICROSOFT_DEVELOPER_TOKEN}"
+      account_id: "${MICROSOFT_ACCOUNT_ID}"
+      customer_id: "${MICROSOFT_CUSTOMER_ID}"
+      client_id: "${MICROSOFT_CLIENT_ID}"
+      refresh_token: "${MICROSOFT_REFRESH_TOKEN}"
+      events:
+        - purchase
+        - start_trial
+      conversion_goals:
+        purchase: "Hosting Purchase"
+        start_trial: "StartTrial"
+
+  # ---------------------------------------------------------------------------
+  # Production - All 28 Fronts + Blog + Docs + Forum (webhostmost.*) - idsite=2
+  # ---------------------------------------------------------------------------
+  2:
+    name: "Production Fronts"
+    base_url: "https://www.webhostmost.com"
+    domains:
+      - www.webhostmost.com
+      - webhostmost.com
+      - nl.webhostmost.be
+      - ru.webhostmost.md
+      - www.webhostmost.at
+      - webhostmost.at
+      - www.webhostmost.be
+      - webhostmost.be
+      - www.webhostmost.ca
+      - webhostmost.ca
+      - www.webhostmost.cy
+      - webhostmost.cy
+      - www.webhostmost.de
+      - webhostmost.de
+      - www.webhostmost.ee
+      - webhostmost.ee
+      - www.webhostmost.es
+      - webhostmost.es
+      - www.webhostmost.fi
+      - webhostmost.fi
+      - www.webhostmost.fr
+      - webhostmost.fr
+      - www.webhostmost.gr
+      - webhostmost.gr
+      - www.webhostmost.in
+      - webhostmost.in
+      - www.webhostmost.it
+      - webhostmost.it
+      - www.webhostmost.lt
+      - webhostmost.lt
+      - www.webhostmost.lu
+      - webhostmost.lu
+      - www.webhostmost.lv
+      - webhostmost.lv
+      - www.webhostmost.md
+      - webhostmost.md
+      - www.webhostmost.mt
+      - webhostmost.mt
+      - www.webhostmost.nl
+      - webhostmost.nl
+      - www.webhostmost.pk
+      - webhostmost.pk
+      - www.webhostmost.pt
+      - webhostmost.pt
+      - www.webhostmost.ro
+      - webhostmost.ro
+      - www.webhostmost.ru
+      - webhostmost.ru
+      - www.webhostmost.si
+      - webhostmost.si
+      - www.webhostmost.sk
+      - webhostmost.sk
+      - www.webhostmost.uk
+      - webhostmost.uk
+      # Blog, Docs, Forum
+      - blog.webhostmost.com
+      - docs.webhostmost.com
+      - forum.webhostmost.com
+    client:
+      trackScroll: true
+      linkDomains:
+        # WHMCS client area
+        - client.webhostmost.com
+        # All fronts (cross-domain between each other)
+        - webhostmost.com
+        - webhostmost.at
+        - webhostmost.be
+        - webhostmost.ca
+        - webhostmost.cy
+        - webhostmost.de
+        - webhostmost.ee
+        - webhostmost.es
+        - webhostmost.fi
+        - webhostmost.fr
+        - webhostmost.gr
+        - webhostmost.in
+        - webhostmost.it
+        - webhostmost.lt
+        - webhostmost.lu
+        - webhostmost.lv
+        - webhostmost.md
+        - webhostmost.mt
+        - webhostmost.nl
+        - webhostmost.pk
+        - webhostmost.pt
+        - webhostmost.ro
+        - webhostmost.ru
+        - webhostmost.si
+        - webhostmost.sk
+        - webhostmost.uk
+        # Blog, Docs, Forum
+        - blog.webhostmost.com
+        - docs.webhostmost.com
+        - forum.webhostmost.com
+    ga4:
+      enabled: true
+      measurement_id: "${GA4_PROD_FRONTS_MEASUREMENT_ID}"
+      api_secret: "${GA4_PROD_FRONTS_API_SECRET}"
+      events:
+        - page_view
+        - session_start
+        - begin_checkout
+        - scroll
+    meta:
+      enabled: true
+      pixel_id: "${META_PROD_PIXEL_ID}"
+      access_token: "${META_PROD_ACCESS_TOKEN}"
+      events:
+        - page_view
+        - begin_checkout
+
+  # ---------------------------------------------------------------------------
+  # Staging - Front (analytics.ignat.best) - idsite=3
+  # ---------------------------------------------------------------------------
+  3:
+    name: "Staging Front"
+    base_url: "https://analytics.ignat.best"
+    domains:
+      - analytics.ignat.best
+    client:
+      trackScroll: true
+      linkDomains:
+        - staging.whmtest.com
+    ga4:
+      enabled: true
+      measurement_id: "${GA4_STAGING_MEASUREMENT_ID}"
+      api_secret: "${GA4_STAGING_API_SECRET}"
+      events:
+        - page_view
+        - session_start
+        - begin_checkout
+        - scroll
+    meta:
+      enabled: true
+      pixel_id: "${META_STAGING_PIXEL_ID}"
+      access_token: "${META_STAGING_ACCESS_TOKEN}"
+      test_event_code: "${META_STAGING_TEST_EVENT_CODE}"
+      base_url: "https://analytics.ignat.best"
+      events:
+        - page_view
+        - begin_checkout
+
+  # ---------------------------------------------------------------------------
+  # Staging - WHMCS (staging.whmtest.com) - idsite=4
+  # ---------------------------------------------------------------------------
+  4:
+    name: "Staging WHMCS"
+    base_url: "https://staging.whmtest.com"
+    domains:
+      - staging.whmtest.com
+    client:
+      trackScroll: false
+      linkDomains:
+        - analytics.ignat.best
+    ga4:
+      enabled: true
+      measurement_id: "${GA4_STAGING_MEASUREMENT_ID}"
+      api_secret: "${GA4_STAGING_API_SECRET}"
+      events:
+        - page_view
+        - purchase
+        - start_trial
+        - start_free
+    meta:
+      enabled: true
+      pixel_id: "${META_STAGING_PIXEL_ID}"
+      access_token: "${META_STAGING_ACCESS_TOKEN}"
+      test_event_code: "${META_STAGING_TEST_EVENT_CODE}"
+      base_url: "https://staging.whmtest.com"
+      events:
+        - purchase
+        - start_trial
+
+  # ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
+  # Production - Midlton Nails Studio (midltonnailsstudio.com) - idsite=5
+  # ---------------------------------------------------------------------------
+  5:
+    name: "Midlton Nails Studio"
+    base_url: "https://midltonnailsstudio.com"
+    domains:
+      - midltonnailsstudio.com
+      - www.midltonnailsstudio.com
+    client:
+      trackScroll: true
+      linkDomains: []
+    ga4:
+      enabled: false
+    meta:
+      enabled: true
+      pixel_id: "${META_MIDLTON_PIXEL_ID}"
+      access_token: "${META_MIDLTON_ACCESS_TOKEN}"
+      events:
+        - view_content
+        - initiate_checkout
+        - contact
+      custom_events:
+        initiate_checkout:
+          matomo_category: "CTA"
+          matomo_action: "book_now"
+        contact:
+          matomo_category: "Form"
+          matomo_action: "contact_submit"
